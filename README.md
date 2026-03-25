@@ -37,8 +37,7 @@ try:
         sleep(3.0)               # 보행 시간을 3초간 유지
     
 except KeyboardInterrupt:
-    # 사용자가 Ctrl+C를 눌러 종료했을 때 발생하는 예외 처리
-    pass
+  
 
 # [Step 4] 리소스 해제 및 안전 종료 (모든 LED 소등)
 # 프로그램 종료 후에도 전압이 남아 LED가 켜져 있는 것을 방지
