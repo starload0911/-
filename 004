@@ -1,0 +1,30 @@
+from flask import Flask, render_template, request # 웹 서버 구축을 위한 Flask 라이브러리 임포트
+from gpiozero import LED # 라즈베리파이 GPIO 핀 제어를 위한 라이브러리 임포트 
+
+app = Flask(__name__) # Flask 애플리케이션 인스턴스 생성 
+red_led = LED(21) # GPIO 21번 핀에 연결된 LED 객체 설정 
+
+# 웹 서버의 기본 주소('/')로 접속했을 때 실행되는 함수 
+@app.route('/')
+def home():
+    # templates 폴더에 있는 index.html 파일을 브라우저에 렌더링하여 보여줌
+    return render_template("index.html")
+
+# 웹 페이지의 폼(Form)을 통해 '/data' 주소로 POST 요청이 왔을 때 실행되는 함수
+@app.route('/data', methods = ['POST'])
+def data():
+    # HTML 폼에서 'led'라는 이름(name)으로 전달된 값('on' 또는 'off')을 가져옴
+    data = request.form['led']
+    
+    if(data == 'on'):
+        red_led.on() # 전달된 값이 'on'이면 LED를 켬 
+    elif(data == 'off'):
+        red_led.off() # 전달된 값이 'off'이면 LED를 끔
+        
+    # 처리가 완료된 후 다시 홈(메인) 페이지로 이동함 
+    return home()
+
+# 스크립트가 직접 실행될 때 웹 서버를 가동함
+if __name__ == "__main__":
+    # 모든 접속 허용(0.0.0.0), HTTP 기본 포트인 80번 포트로 서버 실행 
+    app.run(host = "0.0.0.0", port = "80")
