@@ -1,0 +1,63 @@
+import requests  # 웹 페이지의 데이터를 가져오기 위한 라이브러리
+import re        # 정규표현식을 사용하여 데이터를 추출하기 위한 라이브러리
+import time      # 시간 지연(sleep)을 위한 라이브러리
+import datetime  # 현재 날짜와 시간을 확인하기 위한 라이브러리
+import telepot   # 텔레그램 봇 제어를 위한 라이브러리
+
+# 텔레그램 설정 (본인의 ID와 토큰 사용)
+telegram_id = '730238165'
+my_token = '5400967414:AAEmAvwaQF6du8gny7A9upRniGvtHOi-Ro0'
+ 
+# 텔레그램 봇 객체 생성
+bot = telepot.Bot(my_token)
+
+def getWeather():
+    """
+    기상청 RSS 피드에서 날씨 정보를 가져와 문자열로 가공하는 함수
+    """
+    # 기상청 동네예보 RSS URL (경기도 오산시 세교동 기준)
+    url = "http://www.kma.go.kr/wid/queryDFSRSS.jsp?zone=4139054000"
+    response = requests.get(url)
+
+    # 정규표현식을 이용해 필요한 태그 안의 내용만 추출
+    time_list = re.findall(r'<hour>(.+?)</hour>', response.text)    # 시간
+    temp_list = re.findall(r'<temp>(.+)</temp>', response.text)     # 기온
+    humi_list = re.findall(r'<reh>(.+?)</reh>', response.text)      # 습도
+    wfKor_list = re.findall(r'<wfKor>(.+?)</wfKor>', response.text) # 날씨 상태(한국어)
+    
+    text = ""
+    # 8개 타임슬롯(총 24시간 예보) 데이터를 반복문을 통해 하나의 문자열로 결합
+    for i in range(8):
+        text = text + "(" + str(time_list[i]) + "시 "
+        text = text + str(temp_list[i]) + "C "
+        text = text + str(humi_list[i]) + "% "
+        text = text + str(wfKor_list[i]) + ")"
+    
+    return text
+
+# 메인 실행 루프
+try:
+    print("텔레그램 일기예보 알리미가 시작되었습니다. (30분 간격)")
+    
+    while True:
+        # 현재 날짜와 시간 정보 가져오기
+        now = datetime.datetime.now()
+        
+        # 분과 초가 00분 00초이거나 30분 00초일 때 메시지 전송 (30분 간격)
+        if now.minute == 0 and now.second == 0:
+            msg = getWeather()
+            print(f"[{now.strftime('%H:%M:%S')}] 정각 알림 전송 중...")
+            bot.sendMessage(telegram_id, msg)
+            time.sleep(1) # 중복 전송 방지를 위해 1초 대기
+            
+        elif now.minute == 30 and now.second == 0:
+            msg = getWeather()
+            print(f"[{now.strftime('%H:%M:%S')}] 30분 알림 전송 중...")
+            bot.sendMessage(telegram_id, msg)
+            time.sleep(1) # 중복 전송 방지를 위해 1초 대기
+            
+        # CPU 부하를 줄이기 위해 짧은 대기 (0.5초마다 시간 체크)
+        time.sleep(0.5)
+
+except KeyboardInterrupt:
+    print("\n사용자에 의해 프로그램이 종료되었습니다.")
