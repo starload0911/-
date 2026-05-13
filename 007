@@ -1,0 +1,65 @@
+import paho.mqtt.client as mqtt  # MQTT 통신을 위한 라이브러리 임포트
+import time                      # 시간 지연(sleep)을 위한 라이브러리 임포트
+from gpiozero import LED         # 라즈베리파이 GPIO 제어를 위한 LED 클래스 임포트
+import threading                 # 병렬 처리를 위한 쓰레드 라이브러리 임포트
+
+# LED 객체 생성 (각 색상별 연결된 GPIO 핀 번호 지정)
+greenLed = LED(16)  # 초록색 LED: GPIO 16번
+blueLed = LED(20)   # 파란색 LED: GPIO 20번
+redLed = LED(21)    # 빨간색 LED: GPIO 21번
+
+# MQTT 메시지를 수신했을 때 실행되는 콜백 함수
+def on_message(client, userdata, msg):
+    # 수신된 토픽과 메시지(payload)를 터미널에 출력
+    print(msg.topic + " " + str(msg.payload))
+    
+    # 바이트 형태의 메시지를 문자열로 디코딩
+    message = msg.payload.decode()
+    print(message)
+    
+    # 수신된 메시지 내용에 따라 해당 LED 제어
+    if message == "green_on":
+        greenLed.on()   # 초록 LED 켜기
+    elif message == "green_off":
+        greenLed.off()  # 초록 LED 끄기
+    elif message == "blue_on":
+        blueLed.on()    # 파란 LED 켜기
+    elif message == "blue_off":
+        blueLed.off()   # 파란 LED 끄기
+    elif message == "red_on":
+        redLed.on()     # 빨간 LED 켜기
+    elif message == "red_off":
+        redLed.off()    # 빨간 LED 끄기
+
+# MQTT 클라이언트 객체 생성
+client = mqtt.Client()
+
+# 메시지 수신 시 실행될 함수(on_message) 등록
+client.on_message = on_message
+
+# 브로커(라즈베리파이)의 IP 주소 설정 및 접속
+broker_address = "192.168.137.230" 
+client.connect(broker_address)
+
+# "led"라는 토픽을 구독(Subscribe), QoS 레벨은 1로 설정
+client.subscribe("led", 1)
+
+count = 0  # 전송할 카운트 변수 초기화
+
+# 별도의 쓰레드에서 실행될 함수 (주기적으로 데이터 발행)
+def send_thread():
+    global count  # 전역 변수 count 사용 선언
+    while 1:      # 무한 루프
+        count = count + 1
+        # "hello" 토픽으로 현재 count 값을 문자열로 변환하여 발행(Publish)
+        client.publish("hello", str(count))
+        time.sleep(1.0)  # 1초 대기
+
+# 쓰레드 생성 및 시작
+# target에 실행할 함수를 지정하여 메인 흐름과 별개로 동작하게 함
+task = threading.Thread(target=send_thread)
+task.start()
+
+# 메시지 루프 시작 (메시지 수신을 지속적으로 대기)
+# 이 함수는 블로킹 함수이지만, 위에서 생성한 쓰레드는 별도로 계속 작동함
+client.loop_forever()
